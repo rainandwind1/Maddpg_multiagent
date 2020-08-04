@@ -26,7 +26,7 @@ if __name__ == "__main__":
     GAMMA = 0.98
     BATCH_SIZE = 64
     UPDATE_INTERVAL = 50
-    SAVE_INTERVAL = 500
+    SAVE_INTERVAL = 60
     MAX_EPOCH = 2000
     MEM_LEN = 30000
     render_flag = True
@@ -109,7 +109,9 @@ if __name__ == "__main__":
                 for idx, score in enumerate(score_ls):
                     print("agent{} score:{} train_flag:{} epsilon:{}".format(idx, score, train_flag, epsilon))
 
-        if epo_i+1 % SAVE_INTERVAL == 0:
+        if (epo_i+1) % SAVE_INTERVAL == 0:
+            print('save process')
             for idx, model in enumerate(agent_target_models):
-                torch.save(model.state_dict(), param_path + 'agent' + str(idx) + '_' + str(epo_i + 1) + '.pkl')
+                print('agent' + str(idx))
+                torch.save(model.state_dict(), param_path + '/agent' + str(idx) + '_' + str(epo_i + 1) + '.pkl')
         
