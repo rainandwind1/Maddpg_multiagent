@@ -74,3 +74,25 @@ if __name__ == "__main__":
 #         print (info)
 #         print()
 
+class Solution(object):
+    def rob(self, root):
+        res = []
+        def search_node(node, depth):
+            if not node:
+                return
+            if len(res) <= depth:
+                res.append([])
+            res[depth].append(node.val)
+            search_node(node.left, depth + 1)
+            search_node(node.right, depth + 1)
+        search_node(root, 0)
+        res = [sum(i) for i in res]
+        dp = [0] * len(res)
+        dp[0] = res[0]
+        dp[1] = max(res[0], res[1])
+        for i in range(2, len(dp)):
+            dp[i] = max(dp[i - 2] + res[i], dp[i - 1])
+        return dp[-1]
+
+
+                        

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from make_env import make_env
 import numpy as np
 import random
-from model import Model_net
+from model import Model_net, PPO
 import argparse
 import os
 
@@ -20,18 +20,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     env_name = args.scen_name
     LEARNING_RATE = 1e-3
-    DONE_INTERVAL = 60
     total_step = 0
-    epsilon = 0.9
+    epsilon = 0.1
     GAMMA = 0.98
-    BATCH_SIZE = 64
-    UPDATE_INTERVAL = 50
+    K_epo = 2
+    Lambda = 0.95
+    DONE_INTERVAL = 100 
     SAVE_INTERVAL = 60
     MAX_EPOCH = 2000
-    MEM_LEN = 30000
     render_flag = True
-    epsilon_flag = True
     train_flag = False
+    LOAD_KEY = False
+    TRAIN_KEY = True
     param_path = '.\param'
     log_path = '.\info'
     if not os.path.exists(param_path):
@@ -44,16 +44,18 @@ if __name__ == "__main__":
     obs_ls = env.reset()        # 初始化状态
 
     # 初始化模型
-    agent_models = [Model_net(str(i), len(obs_ls[i]), env.action_space[i].n, MEM_LEN, LEARNING_RATE) for i in range(len(env.world.agents))]    
-    agent_target_models = [Model_net('target_' + str(i), len(obs_ls[i]), env.action_space[i].n, MEM_LEN, LEARNING_RATE) for i in range(len(env.world.agents))]    
-    
-    for idx, model in enumerate(agent_target_models):
-        model.load_state_dict(agent_models[idx].state_dict())
+    agent_models = [PPO(str(i), len(obs_ls[i]), env.action_space[i].n, LEARNING_RATE) for i in range(len(env.world.agents))]
 
+    if LOAD_KEY:
+        for idx, model in enumerate(agent_models):
+            if idx == 3:
+                check_point = torch.load('./param/PPOagent3_1980.pkl')
+            else:
+                check_point = torch.load('./param/PPOagent2_1020.pkl')
+            model.load_state_dict(check_point)
 
     for epo_i in range(MAX_EPOCH):
-        epsilon = max(0.01, epsilon * 0.999)
-        obs = env.reset()
+        obs_ls = env.reset()
         score_ls = np.array([0. for _ in range(env.n)]) # n个代理的回合得分表
         for step in range(DONE_INTERVAL):
             total_step += 1
@@ -73,7 +75,7 @@ if __name__ == "__main__":
             
             # IQL choose action
             for i, model in enumerate(agent_models):
-                action_i, action_vec_i = model.choose_action(obs_ls[i], epsilon)
+                action_i, action_vec_i = model.choose_action(obs_ls[i])
                 action_vec_ls.append(action_vec_i)
                 action_ls.append(action_i)
             
@@ -86,32 +88,34 @@ if __name__ == "__main__":
                 else:
                     done_flag_ls.append(1.) 
 
+            a_prob_ls = []
+            for n in range(len(obs_ls)):
+                action_p = agent_models[n](torch.tensor(obs_ls[n], dtype = torch.float32), 'get policy')
+                a_prob_ls.append(action_p[action_ls[n]].detach().item())
+
+
             # save transitions
             for n in range(len(agent_models)):
-                agent_models[n].save_trans((obs_ls[n], action_ls[n], reward_ls[n], obs_next_ls[n], done_flag_ls[n]))
+                agent_models[n].save_trans((obs_ls[n], action_ls[n], reward_ls[n], obs_next_ls[n], a_prob_ls[n], done_flag_ls[n]))
             
             obs_ls = obs_next_ls
             
             # train agent net
-            if total_step > 2000:
-                train_flag = True
-                for i, model in enumerate(agent_models):
-                    model.train(agent_target_models[i], GAMMA, BATCH_SIZE)
+            train_flag = True
+            for i, model in enumerate(agent_models):
+                model.train(K_epo, GAMMA, epsilon, Lambda)
             
-            # cover traget net
-            if epo_i % 50 == 0:
-                for idx, model in enumerate(agent_target_models):
-                    model.load_state_dict(agent_models[idx].state_dict())
-
             # ******* 打印回合结果 ********
             if step == 59:
                 print("Epoch:{}".format(epo_i + 1))
                 for idx, score in enumerate(score_ls):
                     print("agent{} score:{} train_flag:{} epsilon:{}".format(idx, score, train_flag, epsilon))
 
+
+        # 保存信息
         if (epo_i+1) % SAVE_INTERVAL == 0:
             print('save process')
-            for idx, model in enumerate(agent_target_models):
+            for idx, model in enumerate(agent_models):
                 print('agent' + str(idx))
-                torch.save(model.state_dict(), param_path + '/agent' + str(idx) + '_' + str(epo_i + 1) + '.pkl')
+                torch.save(model.state_dict(), param_path + '/PPOagent' + str(idx) + '_' + str(epo_i + 1) + '.pkl')
         
