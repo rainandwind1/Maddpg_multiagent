@@ -22,7 +22,7 @@ if __name__ == "__main__":
     LEARNING_RATE = 1e-3
     DONE_INTERVAL = 200
     total_step = 0
-    epsilon = 0.9
+    epsilon = 0.1
     GAMMA = 0.98
     BATCH_SIZE = 64
     UPDATE_INTERVAL = 50
@@ -30,10 +30,10 @@ if __name__ == "__main__":
     MAX_EPOCH = 2000
     MEM_LEN = 30000
     render_flag = True
-    epsilon_flag = True
+    epsilon_flag = False
     train_flag = False
     LOAD_KEY = True
-    TRAIN_KEY = True
+    TRAIN_KEY = False
     param_path = '.\param'
     log_path = '.\info'
     if not os.path.exists(param_path):
@@ -56,13 +56,14 @@ if __name__ == "__main__":
     if LOAD_KEY:
         for idx, model in enumerate(agent_target_models):
             if idx == 3:
-                check_point = torch.load('./param/agent3_1980.pkl')
+                check_point = torch.load('./param/IQLagent3_600.pkl')
             else:
-                check_point = torch.load('./param/agent2_1020.pkl')
+                check_point = torch.load('./param/IQLagent2_600.pkl')
             model.load_state_dict(check_point)
 
     for epo_i in range(MAX_EPOCH):
-        epsilon = max(0.01, epsilon * 0.999)
+        if epsilon_flag:
+            epsilon = max(0.01, epsilon * 0.999)
         obs_ls = env.reset()
         score_ls = np.array([0. for _ in range(env.n)]) # n个代理的回合得分表
         for step in range(DONE_INTERVAL):
@@ -92,7 +93,7 @@ if __name__ == "__main__":
             done_flag_ls = []
             for d in done_ls:
                 if (total_step % 60 and total_step > 0) or d:
-                    done_flag_ls.append(0.)
+                    done_flag_ls.append(1.)
                 else:
                     done_flag_ls.append(1.) 
 
@@ -114,7 +115,7 @@ if __name__ == "__main__":
                     model.load_state_dict(agent_models[idx].state_dict())
 
             # ******* 打印回合结果 ********
-            if step == 59:
+            if step == DONE_INTERVAL - 1:
                 print("Epoch:{}".format(epo_i + 1))
                 for idx, score in enumerate(score_ls):
                     print("agent{} score:{} train_flag:{} epsilon:{}".format(idx, score, train_flag, epsilon))

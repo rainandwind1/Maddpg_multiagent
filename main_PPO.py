@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     env_name = args.scen_name
-    LEARNING_RATE = 1e-3
+    LEARNING_RATE = 1e-4
     total_step = 0
     epsilon = 0.1
     GAMMA = 0.98
@@ -43,8 +43,11 @@ if __name__ == "__main__":
     env = make_env(env_name)
     obs_ls = env.reset()        # 初始化状态
 
+    global_input_size = 0
+    for cv in obs_ls:
+        global_input_size += len(cv)
     # 初始化模型
-    agent_models = [PPO(str(i), len(obs_ls[i]), env.action_space[i].n, LEARNING_RATE) for i in range(len(env.world.agents))]
+    agent_models = [PPO(str(i), len(obs_ls[i]),  global_input_size, env.action_space[i].n, LEARNING_RATE) for i in range(len(env.world.agents))]
 
     if LOAD_KEY:
         for idx, model in enumerate(agent_models):
@@ -84,7 +87,7 @@ if __name__ == "__main__":
             done_flag_ls = []
             for d in done_ls:
                 if (total_step % 60 and total_step > 0) or d:
-                    done_flag_ls.append(0.)
+                    done_flag_ls.append(1.)
                 else:
                     done_flag_ls.append(1.) 
 
@@ -95,8 +98,14 @@ if __name__ == "__main__":
 
 
             # save transitions
+            total_s = []
+            total_s_next = []
+            for t in range(len(obs_ls)):
+                total_s += list(obs_ls[t])
+                total_s_next += list(obs_next_ls[t])
+
             for n in range(len(agent_models)):
-                agent_models[n].save_trans((obs_ls[n], action_ls[n], reward_ls[n], obs_next_ls[n], a_prob_ls[n], done_flag_ls[n]))
+                agent_models[n].save_trans((obs_ls[n], total_s, action_ls[n], reward_ls[n], obs_next_ls[n], total_s_next, a_prob_ls[n], done_flag_ls[n]))
             
             obs_ls = obs_next_ls
             
@@ -106,7 +115,7 @@ if __name__ == "__main__":
                 model.train(K_epo, GAMMA, epsilon, Lambda)
             
             # ******* 打印回合结果 ********
-            if step == 59:
+            if step == DONE_INTERVAL - 1:
                 print("Epoch:{}".format(epo_i + 1))
                 for idx, score in enumerate(score_ls):
                     print("agent{} score:{} train_flag:{} epsilon:{}".format(idx, score, train_flag, epsilon))

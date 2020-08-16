@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     MAX_EPOCH = 1000
     render_flag = True
-    env = make_env('simple_tag')
+    env = make_env('simple_speaker_listener')
     obs_ls = env.reset()
     for i in range(MAX_EPOCH):
         obs = env.reset()
