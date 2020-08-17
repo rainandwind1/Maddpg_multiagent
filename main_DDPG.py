@@ -29,7 +29,7 @@ if __name__ == "__main__":
     SAVE_INTERVAL = 500
     MAX_EPOCH = 30000
     MEM_LEN = 10000
-    display = False
+    display = True
 
     if display:
         render_flag, LOAD_KEY, TRAIN_KEY = [True, True, False]
@@ -64,9 +64,9 @@ if __name__ == "__main__":
     if LOAD_KEY:
         for idx, model in enumerate(agent_models):
             if idx == 3:
-                check_point = torch.load('./param/DDPGagent3_3000.pkl')
+                check_point = torch.load('./param/DDPGagent3_18000.pkl')
             else:
-                check_point = torch.load('./param/DDPGagent2_3000.pkl')
+                check_point = torch.load('./param/DDPGagent2_18000.pkl')
             model.load_state_dict(check_point)
 
     for epo_i in range(MAX_EPOCH):

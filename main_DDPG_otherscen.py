@@ -64,7 +64,7 @@ if __name__ == "__main__":
             if idx == 0:
                 check_point = torch.load('./param/DDPGagent0_listener_5000.pkl')
             else:
-                check_point = torch.load('./param/DDPGagent1_listener_5000.pkl')
+                check_point = torch.load('./param/DDPGagent1_listener_5m000.pkl')
             model.load_state_dict(check_point)
 
     for epo_i in range(MAX_EPOCH):
