@@ -285,7 +285,7 @@ class DDPG(nn.Module):
 
         # 参数跟踪
         for param_t, param_o in zip(target_model_ls[int(self.name)].parameters(), self.parameters()):
-            param_t.data = toi*param_o.data + (1-toi)*param_t.data 
+            param_t.data.copy_(toi*param_o.data + (1-toi)*param_t.data)
 
     
     
